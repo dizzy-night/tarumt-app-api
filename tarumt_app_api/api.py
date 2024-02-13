@@ -266,6 +266,15 @@ class TarAppAPI:
 
     @require_login
     @check_session_valid
+    def _fetch_announcement(self, annoucement_id: str) -> requests.Response:
+        params = {
+            "id": annoucement_id,
+            "ftoken": self.session.headers["X-Auth"]
+        }
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/studentAnnouncementDet.jsp", params=params)
+
+    @require_login
+    @check_session_valid
     def _fetch_today_taken_attendance(self) -> requests.Response:
         """
         {
