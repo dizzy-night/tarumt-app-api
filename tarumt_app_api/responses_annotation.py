@@ -30,32 +30,32 @@ class TokenExpired(FailedAPIResponse):
     msgdesc: Literal["Token expired. Please login again"]
 
 
-class LoginSuccess(SuccessfulAPIResponse):
+class LoginSuccessResponse(SuccessfulAPIResponse):
     brncd: CampusID
     fullname: str  # student name
 
 
-class LoginFailure(FailedAPIResponse):
+class LoginFailureResponse(FailedAPIResponse):
     token: str    # is empty
 
 
-type LoginResponse = LoginSuccess | LoginFailure
+type LoginResponse = LoginSuccessResponse | LoginFailureResponse
 
 
-class AppAccess(SuccessfulAPIResponse):
+class AppAccessResponse(SuccessfulAPIResponse):
     access: list[str]  # list of app accesses
 
 
 # unsure
-class StudentNotice(APIResponse):
+class StudentNoticeResponse(APIResponse):
     show: str  # not sure, so far only got literal "N"
 
 
-class StudentAnnouncementCount(SuccessfulAPIResponse):
+class StudentAnnouncementCountResponse(SuccessfulAPIResponse):
     total: int
 
 
-class StudentAnnouncements(APIResponse):
+class StudentAnnouncementsResponse(APIResponse):
     class AnnoucementData(TypedDict):
         ftitle: str
         fsender: str
@@ -73,16 +73,16 @@ class StudentAnnouncements(APIResponse):
     total_record: int
 
 
-class TodayAttendanceTakenCount(SuccessfulAPIResponse):
+class TodayAttendanceTakenCountResponse(SuccessfulAPIResponse):
     total: int
 
 
-class TodayAttendance(APIResponse):
+class TodayAttendanceResponse(APIResponse):
     # TODO: find out
     list: Sequence
 
 
-class CoursesAttendanceHistorySummary(APIResponse):
+class CoursesAttendanceHistorySummaryResponse(APIResponse):
     class CourseAttendanceSummary(TypedDict):
         frate: float    # attendance rate
         fpass: YesOrNo  # above 80% rate?
@@ -93,7 +93,7 @@ class CoursesAttendanceHistorySummary(APIResponse):
     list: Sequence[CourseAttendanceSummary]
 
 
-class CourseAttendanceHistory(APIResponse):
+class CourseAttendanceHistoryResponse(APIResponse):
     class CourseAttendance(TypedDict):
         leave: int    # number of leaves
         absent: int   # number of absences
@@ -121,11 +121,11 @@ class CourseAttendanceHistory(APIResponse):
     list: Sequence[ClassAttendance]
 
 
-class PendingBillCount(SuccessfulAPIResponse):
+class PendingBillCountResponse(SuccessfulAPIResponse):
     total: int
 
 
-class BillHistory(APIResponse):
+class BillHistoryResponse(APIResponse):
     class Bill(TypedDict):
         class Receipt(TypedDict):
             ftype: str     # the initial of the month the receipt is printed, January => J
@@ -146,12 +146,12 @@ class BillHistory(APIResponse):
 
 
 # TODO: not have a profile pic somehow
-class ProfilePhoto(SuccessfulAPIResponse):
+class ProfilePhotoResponse(SuccessfulAPIResponse):
     photo: str  # base64 encoded image bytes
 
 
 # TODO: unfinished, have classes
-class ClassTimetable(APIResponse):
+class ClassTimetableResponse(APIResponse):
     duration: str
     rec: Sequence
     weeks: Sequence
@@ -162,18 +162,18 @@ class ClassTimetable(APIResponse):
 
 
 # TODO: wait for exam
-class ExamTimetable(TypedDict):
+class ExamTimetableResponse(TypedDict):
     msg: Literal["pending"]
     msgdesc: Literal["Closed!"]
 
 
 # TODO: wait for exam results
-class CurrentSemesterExamResults(APIResponse):
+class CurrentSemesterExamResultsResponse(APIResponse):
     ...
 
 
 # TODO: wait for sem 2 results
-class OverallExamResults(APIResponse):
+class OverallExamResultsResponse(APIResponse):
     class Records(TypedDict):
         class SemesterResults(TypedDict):
             class SemesterSummary(TypedDict):
@@ -213,35 +213,37 @@ class OverallExamResults(APIResponse):
     rec: Records  # records
 
 
-class _Facility(TypedDict):
+class FacilityDetails(TypedDict):
     fname: str  # facility name
     id: str     # facility guid
 
 
-class FacilitiesList(APIResponse):
-    eventlist: Sequence[_Facility]
+class FacilitiesListResponse(APIResponse):
+    eventlist: Sequence[FacilityDetails]
     msgtype: str  # idk
 
 
-class FacilitiesBookingGuidelines(APIResponse):
-    class Guidelines(_Facility):
+class FacilitiesBookingGuidelinesResponse(APIResponse):
+    class Guidelines(FacilityDetails):
         fcontent: str
 
     list: Sequence[Guidelines]
     msgtype: str
 
 
-class FacilityVenueTypes(APIResponse):
-    class VenueType(TypedDict):
-        disabled: bool
-        text: str   # venue name
-        value: str  # venue guid
+class VenueDetails(TypedDict):
+    disabled: bool
+    text: str   # venue name
+    value: str  # venue guid
+
+
+class FacilityVenuesResponse(APIResponse):
 
     msgtype: str
-    option: Sequence[VenueType]
+    option: Sequence[VenueDetails]
 
 
-class FacilityBookingDates(APIResponse):
+class FacilityBookingDatesResponse(APIResponse):
     class BookingDate(TypedDict):
         disabled: bool
         text: str      # weird date text, format  DD/<month name>/YYYY (<day>)
@@ -252,18 +254,18 @@ class FacilityBookingDates(APIResponse):
 
 
 # TODO: find out
-class FacilityGeneralSetting(APIResponse):
+class FacilityGeneralSettingResponse(APIResponse):
     member_required: bool
     msgtype: str
 
 
-class FacilityUsageGuidelines(APIResponse):
+class FacilityUsageGuidelinesResponse(APIResponse):
     member_required: bool
     msgtype: str
     content: str   # html
 
 
-class FacilityBookingTimeslots(APIResponse):
+class FacilityBookingTimeslotsResponse(APIResponse):
     class Timeslot(TypedDict):
         disabled: bool
         text: str   # time text, format hh:mm pp
@@ -274,32 +276,32 @@ class FacilityBookingTimeslots(APIResponse):
 
 
 # TODO: book facilities
-class FacilityBookingSuccess(SuccessfulAPIResponse):
+class FacilityBookingSuccessResponse(SuccessfulAPIResponse):
     ...
 
 
-class FacilityBookingFailure(FailedAPIResponse):
+class FacilityBookingFailureResponse(FailedAPIResponse):
     msgtype: Literal["process"]
 
 
-class FacilityCalendar(APIResponse):
+class FacilityCalendarResponse(APIResponse):
     note: str     # facility calendar legends, html
     header: str   # css
     content: str  # calendar, html
 
 
-class StudentValidate(TypedDict):
+class StudentValidateResponse(TypedDict):
     msg: Literal["success", "invalid"]
     msgdesc: Literal["", "Invalid Student ID or Name"]
     msgtype: str
 
 
 # TODO: have vehicle pass
-class VehicleEntryPass(APIResponse):
+class VehicleEntryPassResponse(APIResponse):
     list: Sequence
 
 
-class HelplinesDetails(APIResponse):
+class HelplinesDetailsResponse(APIResponse):
     class Helpline(TypedDict):
         class ContactDetails(TypedDict):
             tel_dis: str   # phone number
@@ -314,7 +316,7 @@ class HelplinesDetails(APIResponse):
     list: Sequence[Helpline]
 
 
-class CampusLists(APIResponse):
+class CampusListsResponse(APIResponse):
     class Campus(TypedDict):
         display: str   # campus name
         value: CampusID
@@ -323,9 +325,9 @@ class CampusLists(APIResponse):
 
 
 # TODO: take an attendance
-class AttendanceTakeFailure(FailedAPIResponse):
+class AttendanceTakeFailureResponse(FailedAPIResponse):
     msg: Literal["taruc-ip"]
     msgdesc: str   # "<ip> is an unknown IP address. Please connect to TARUMT's WIFI and submit again."
 
 
-type AttendanceTakeResponse = AttendanceTakeFailure
+type AttendanceTakeResponse = AttendanceTakeFailureResponse
