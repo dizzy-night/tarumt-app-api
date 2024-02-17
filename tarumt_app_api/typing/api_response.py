@@ -15,6 +15,7 @@ class SuccessfulAPIResponse(APIResponse):
 
 class FailedAPIResponse(APIResponse):
     msg: Literal["failed"]
+#     "Service temporarily unavailable, please try again later."
 
 
 class BlockedAPIResponse(APIResponse):
