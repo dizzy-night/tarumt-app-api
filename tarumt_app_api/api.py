@@ -1,14 +1,46 @@
 import requests
-from typing import Sequence, Callable
+import functools
 
+from typing import Callable, Sequence
 from .exceptions import *
-from .responses_annotation import *
+from .typing.api_response import CampusID
 
 
 APP_VERSION = "2.0.18"
+# API_ENDPOINT = "https://app.tarc.edu.my/MobileService/"
 
 
-class TarAppAPI:
+def require_login[T, **P](func: Callable[P, T]) -> Callable[P, T]:
+    """Checks if header "X-Auth" is present in the headers"""
+    @functools.wraps(func)
+    def check(self: "BaseTarAppApi", *args: P.args, **kwargs: P.kwargs) -> T:
+        if not self.is_login:
+            raise NotLoggedIn()
+        return func(self, *args, **kwargs)
+
+    return check
+
+
+def check_session_valid[T: requests.Response, **P](func: Callable[P, T]) -> Callable[P, T]:
+    """Checks if the response is a failed response."""
+    @functools.wraps(func)
+    def check(self: "BaseTarAppApi", *args: P.args, **kwargs: P.kwargs) -> T:
+        ret = func(self, *args, **kwargs)
+
+        match ret.json():
+            case {
+                "msg": "failed",
+                "msgdesc": reason,
+                "statusCd": "invalid-token"
+            }:
+                raise InvalidSession(reason)
+
+        return ret
+
+    return check
+
+
+class BaseTarAppApi:
     def __init__(self):
         self.session = requests.Session()
 
@@ -18,141 +50,9 @@ class TarAppAPI:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()
 
+    @property
     def is_login(self) -> bool:
         return "X-Auth" in self.session.headers
-
-    @staticmethod
-    def require_login[T, **P](func: Callable[P, T]) -> Callable[P, T]:
-        """Checks if header "X-Auth" is present in the headers"""
-
-        def check(self, *args: P.args, **kwargs: P.kwargs) -> T:
-            if not self.is_login():
-                raise NotLoggedIn()
-            return func(self, *args, **kwargs)
-
-        return check
-
-    @staticmethod
-    def check_session_valid[**P](func: Callable[P, requests.Response]) -> Callable[P, requests.Response]:
-        """Checks if the response is a failed response."""
-        def check(self, *args: P.args, **kwargs: P.kwargs) -> requests.Response:
-            ret = func(self, *args, **kwargs)
-
-            match ret.json():
-                case {
-                    "msg": "failed",
-                    "msgdesc": reason,
-                    "statusCd": "invalid-token"
-                }:
-                    raise InvalidSession(reason)
-
-            return ret
-
-        return check
-
-    def login(self, student_id: str, password: str):
-        """
-        :param student_id: The student's id
-        :type student_id: str
-        
-        :param password: The student's password
-        :type password: str
-        
-        :raises LoginError: 
-        """
-        ret = self._login(student_id, password)
-
-        match ret.json():
-            case {
-                "msg": "failed",
-                "msgdesc": reason
-            }:
-                raise LoginError(reason)
-            case {
-                "msg": "success",
-                "token": token
-            }:
-                self.session.headers["X-Auth"] = token
-
-    @require_login
-    def book_facility(
-            self,
-            facility_id: str,
-            booking_date: str,
-            starting_time: str,
-            ending_time: str,
-            venue_id: str,
-            students_id_and_name: Sequence[tuple[str, str]]
-    ):
-        """
-        :param facility_id: The id of the facility. `facility_id` retrieved from :func:`fetch_facilities`
-        :type facility_id: str
-
-        :param booking_date: The date of the booking. Format in "DD/MM/YYYY"
-        :type booking_date: str
-
-        :param starting_time: The starting time of the booking. Format in "mm:ss"
-        :type starting_time: str
-
-        :param ending_time: The ending time of the booking. Format in "mm:ss"
-        :type ending_time: str
-
-        :param venue_id: The venue id of the facility. `venue_id` retrieved from :func:`fetch_facilities_venue`
-        :type venue_id: str
-
-        :param students_id_and_name: A sequence of tuple (of length 2) containing the student id and names.
-        :type students_id_and_name: Sequence[tuple[str, str]]
-
-        :raises FacilityBookingError: When the booking failed.
-        """
-        ret = self._book_facility(
-            facility_id,
-            booking_date,
-            starting_time,
-            ending_time,
-            venue_id,
-            students_id_and_name
-        )
-
-        match ret.json():
-            case {
-                "msg": "failed",
-                "msgdesc": reason
-            }:
-                raise FacilityBookingError(reason)
-
-    @require_login
-    def validate_student(self, student_id: str, student_name: str) -> bool:
-        """
-
-        :param student_id:
-
-        :param student_name:
-
-        :return:
-        """
-        ret = self._validate_student(student_id, student_name)
-
-        if ret.json()["msg"] == "success":
-            return True
-        return False
-
-    @require_login
-    def take_attendance(self, attendance_code: str):
-        """
-
-        :param attendance_code:
-
-        :return:
-        """
-        ret = self._take_attendance(attendance_code)
-
-        match ret.json():
-            case {
-                "msg": "taruc-ip",
-                "msgdesc": reason
-            }:
-                raise AttendanceError(reason)
 
     @check_session_valid
     def _login(self, student_id: str, password: str):
@@ -217,7 +117,7 @@ class TarAppAPI:
 
     @require_login
     @check_session_valid
-    def _fetch_announcements_count(self) -> requests.Response:
+    def _fetch_announcement_count(self) -> requests.Response:
         """
         {
           "msg": "success",
@@ -228,7 +128,8 @@ class TarAppAPI:
         params = {
             "act": "get-new"
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentAnnouncement.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentAnnouncement.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -262,16 +163,18 @@ class TarAppAPI:
             "msgType": msg_type,
             "act": "list"
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentAnnouncement.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentAnnouncement.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
-    def _fetch_announcement(self, annoucement_id: str) -> requests.Response:
+    def _fetch_announcement(self, announcement_id: str) -> requests.Response:
         params = {
-            "id": annoucement_id,
+            "id": announcement_id,
             "ftoken": self.session.headers["X-Auth"]
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/studentAnnouncementDet.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/studentAnnouncementDet.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -438,8 +341,9 @@ class TarAppAPI:
             "deviceid": "",
             "act": "update"
         }
-        return self.session.post("https://app.tarc.edu.my/MobileService/services/AJAXUpdateUserSession.jsp", data=payload)
-    
+        return self.session.post("https://app.tarc.edu.my/MobileService/services/AJAXUpdateUserSession.jsp",
+                                 data=payload)
+
     # def refresh_token(self) -> None:
     #     # no idea where to use
     #     self.session.post("https://app.tarc.edu.my/MobileService/refreshToken")
@@ -466,7 +370,8 @@ class TarAppAPI:
             "act": "get",
             "week": week
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentTimetable.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXStudentTimetable.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -495,7 +400,8 @@ class TarAppAPI:
         params = {
             "act": "list-current"
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXExamResultCurrentList.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXExamResultCurrentList.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -550,7 +456,8 @@ class TarAppAPI:
         params = {
             "act": "list"
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXExamResultCurrentList.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXExamResultCurrentList.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -726,7 +633,7 @@ class TarAppAPI:
 
     @require_login
     @check_session_valid
-    def _fetch_facility_booking_starting_timeslots(self, facility_id: str) -> requests.Response:
+    def _fetch_facility_booking_starting_options(self, facility_id: str) -> requests.Response:
         """
         facility_id = "F1D823EF-4811-4FEA-8AA2-90E9F666FA06"
         {
@@ -762,7 +669,7 @@ class TarAppAPI:
 
     @require_login
     @check_session_valid
-    def _fetch_facility_booking_ending_timeslots(self, facility_id: str) -> requests.Response:
+    def _fetch_facility_booking_ending_options(self, facility_id: str) -> requests.Response:
         """
         facility_id = "F1D823EF-4811-4FEA-8AA2-90E9F666FA06"
         {
@@ -805,7 +712,7 @@ class TarAppAPI:
             starting_time: str,
             ending_time: str,
             venue_id: str,
-            students_id_and_name: Sequence[tuple[str, str]]
+            students_id_and_name: Sequence[tuple[str, str]] | None = None
     ) -> requests.Response:
         """
         (on failure)
@@ -819,18 +726,25 @@ class TarAppAPI:
             "act": "insert",
             "event_id": facility_id,
             "fbkdate": booking_date,  # "DD/MM/YYYY"
-            "fstarttime": starting_time,  # "mm:ss" 24-hours format
-            "fendtime": ending_time,  # "mm:ss" 24-hours format
+            "fstarttime": starting_time,  # "HH:mm" 24-hours format
+            "fendtime": ending_time,  # "HH:mm" 24-hours format
             "venuex_type_id": venue_id,
-            "fpaxno": len(students_id_and_name) + 1,
-            "member_fregkey": [stud[0] for stud in students_id_and_name],
-            "member_name": [stud[1] for stud in students_id_and_name]
         }
+        if students_id_and_name:
+            payload["fpaxno"] = len(students_id_and_name) + 1
+            payload["member_fregkey"] = []
+            payload["member_name"] = []
+            for student_id, student_name in students_id_and_name:
+                payload["member_fregkey"].append(student_id)
+                payload["member_name"].append(student_name)
+        else:
+            payload["fpaxno"] = 1
         return self.session.post("https://app.tarc.edu.my/MobileService/services/AJAXFacilityBooking.jsp", data=payload)
 
     @require_login
     @check_session_valid
-    def _fetch_facility_calendar(self, facility_id: str, date: str, venue_id: str = '', number_of_pax: int = 0) -> requests.Response:
+    def _fetch_facility_calendar(self, facility_id: str, date: str, venue_id: str = '',
+                                 number_of_pax: int = 0) -> requests.Response:
         """
         facility_id = "F1D823EF-4811-4FEA-8AA2-90E9F666FA06"
         date = 21/01/2024
@@ -852,7 +766,8 @@ class TarAppAPI:
             "fpaxno": number_of_pax if number_of_pax > 0 else "",
             "mode": "light"
         }
-        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXFacilityCalendar.jsp", params=params)
+        return self.session.get("https://app.tarc.edu.my/MobileService/services/AJAXFacilityCalendar.jsp",
+                                params=params)
 
     @require_login
     @check_session_valid
@@ -888,7 +803,7 @@ class TarAppAPI:
 
     @require_login
     @check_session_valid
-    def _fetch_emergency_helpline_details(self,campus: CampusID = "KL"):
+    def _fetch_emergency_helpline_details(self, campus: CampusID = "KL"):
         """
         {
           "msg": "",

@@ -1,2 +1,2 @@
-from .api import TarAppAPI
+from .aapi import TarAppAPI
 from .exceptions import *
