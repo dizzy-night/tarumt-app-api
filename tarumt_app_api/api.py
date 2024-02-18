@@ -24,8 +24,8 @@ def require_login[T, **P](func: Callable[P, T]) -> Callable[P, T]:
 def check_session_valid[T: requests.Response, **P](func: Callable[P, T]) -> Callable[P, T]:
     """Checks if the response is a failed response."""
     @functools.wraps(func)
-    def check(self: "BaseTarAppApi", *args: P.args, **kwargs: P.kwargs) -> T:
-        ret = func(self, *args, **kwargs)
+    def check(*args: P.args, **kwargs: P.kwargs) -> T:
+        ret = func(*args, **kwargs)
 
         match ret.json():
             case {
@@ -55,7 +55,7 @@ class BaseTarAppApi:
         return "X-Auth" in self.session.headers
 
     @check_session_valid
-    def _login(self, student_id: str, password: str):
+    def _login(self, username: str, password: str):
         """
         (on failure)
         {
@@ -75,7 +75,7 @@ class BaseTarAppApi:
         }
         """
         payload = {
-            "username": student_id,
+            "username": username,
             "password": password,
             "deviceid": "",
             "devicemodel": "",
@@ -117,8 +117,8 @@ class BaseTarAppApi:
 
     @require_login
     @check_session_valid
-    def _fetch_announcement_count(self) -> requests.Response:
-        """
+    def _fetch_new_announcement_count(self) -> requests.Response:
+        """Used for the red alert number thing beside Announcement
         {
           "msg": "success",
           "total": 5,
