@@ -426,6 +426,31 @@ class CampusListsResponse(TypedDict):
     msgdesc: EmptyStr
 
 
-class AttendanceTakeFailureResponse(TypedDict):
+class AttendanceTakeInvalidIPResponse(TypedDict):
     msg: Literal["taruc-ip"]
     msgdesc: str   # "<ip> is an unknown IP address. Please connect to TARUMT's WIFI and submit again."
+
+
+class _ClassAttendance(TypedDict):
+    classDetails: str  # "hh:mm pp - hh:mm pp, <venue id>"
+    courseDesc: str    # course name
+    lectureBy: str     # lecturer name
+    courseCode: str    # course code
+
+
+class AttendanceTakeSuccessResponse(TypedDict(
+    "AttendanceTakeSuccessResponse",
+    {"class": _ClassAttendance}
+)):
+    msg: Literal["success"]
+    msgdesc: EmptyStr
+
+
+class AttendanceTakeDuplicatedResponse(TypedDict):
+    msg: Literal["duplicated"]
+    msgdesc: Literal["The record already exists"]
+
+
+class AttendanceTakeInvalidCodeResponse(TypedDict):
+    msg: Literal["invalid-code"]
+    msgddesc: Literal["Invalid code entered or you are not allowed to register this class"]
