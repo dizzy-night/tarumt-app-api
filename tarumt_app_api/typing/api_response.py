@@ -393,8 +393,7 @@ class StudentValidateResponse(TypedDict):
     msgtype: str
 
 
-# TODO: have vehicle pass
-class VehicleEntryPassResponse(TypedDict):
+class EntryPassResponse(TypedDict):
     msg: EmptyStr
     list: list
     msgdesc: EmptyStr

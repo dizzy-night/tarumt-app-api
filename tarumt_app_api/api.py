@@ -788,7 +788,7 @@ class BaseTarAppApi:
 
     @require_login
     @check_session_valid
-    def _fetch_vehicle_entry_pass(self) -> requests.Response:
+    def _fetch_entry_pass(self) -> requests.Response:
         """me no car ;w;
         {
           "msg": "",
