@@ -1,12 +1,3 @@
-__all__ = (
-    "LoginError",
-    "FacilityBookingError",
-    "NotLoggedIn",
-    "InvalidSession",
-    "AttendanceError"
-)
-
-
 class LoginError(Exception):
     pass
 
@@ -24,4 +15,16 @@ class InvalidSession(Exception):
 
 
 class AttendanceError(Exception):
+    pass
+
+
+class InvalidIP(AttendanceError):
+    pass
+
+
+class DuplicatedAttendance(AttendanceError):
+    pass
+
+
+class InvalidCode(AttendanceError):
     pass

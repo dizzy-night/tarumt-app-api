@@ -94,7 +94,7 @@ class TarAppAPI(BaseTarAppApi):
         return False
 
     @require_login
-    def take_attendance(self, attendance_code: str):
+    def take_attendance(self, attendance_code: str) -> ClassDetailsAttendance | None:
         """
 
         :param attendance_code:
@@ -108,5 +108,20 @@ class TarAppAPI(BaseTarAppApi):
                 "msg": "taruc-ip",
                 "msgdesc": reason
             }:
-                raise AttendanceError(reason)
+                raise InvalidIP(reason)
+            case {
+                "msg": "duplicated",
+                "msgdesc": reason
+            }:
+                raise DuplicatedAttendance(reason)
+            case {
+                "msg": "invalid-code",
+                "msgdesc": reason
+            }:
+                raise InvalidCode(reason)
+            case {
+                "msg": "success",
+                "class": class_details
+            }:
+                return class_details
 
