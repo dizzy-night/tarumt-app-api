@@ -7,7 +7,7 @@ type ClassType = Literal["P", "T", "L"]  # Practical, Tutorial, Lecture
 type AttendanceType = Literal["P", "L", "A"]  # Present, Leave, Absent
 
 
-class _Class(TypedDict):
+class Class(TypedDict):
     fstaffname: str
     fclasstype: ClassType
     froom: str        # room number
@@ -21,15 +21,23 @@ class _Class(TypedDict):
                       # the weeks the class runs, exp "1-14"
 
 
-class _FacilityDetails(TypedDict):
+class FacilityDetails(TypedDict):
     fname: str  # facility name
     id: str     # facility guid
 
 
-class _VenueDetails(TypedDict):
+class VenueDetails(TypedDict):
     disabled: bool
     text: str   # venue name
     value: str  # venue guid
+
+
+class ClassDetailsAttendance(TypedDict):
+    classDetails: str  # "hh:mm pp - hh:mm pp, <venue id>"
+    courseDesc: str    # course name
+    lectureBy: str     # lecturer name
+    courseCode: str    # course code
+
 
 
 # class name is usually named like "[func_name][capitalized <msg> message]Response"
@@ -193,7 +201,7 @@ class ProfilePhotoSuccessResponse(TypedDict):
 class ClassTimetableResponse(TypedDict):
     class Day(TypedDict(    # noqa
         "Day",
-        {"class": list[_Class]}   # very crude way of trying to add key "class" coz python
+        {"class": list[Class]}   # very crude way of trying to add key "class" coz python
     ), TypedDict):
         date: NotRequired[str]    # date of the class, format "DD/MM/YYYY"
         dowdesc: str              # the day, example "Monday"
@@ -306,14 +314,14 @@ class OverallExamResultResponse(TypedDict):
 
 class FacilitiesListResponse(TypedDict):
     msg: EmptyStr
-    eventlist: list[_FacilityDetails]
+    eventlist: list[FacilityDetails]
     bookinglist: list  # idk
     msgdesc: EmptyStr
     msgtype: EmptyStr  # idk
 
 
 class FacilitiesBookingGuidelinesResponse(TypedDict):
-    class Guidelines(_FacilityDetails):
+    class Guidelines(FacilityDetails):
         fcontent: str
 
     msg: EmptyStr
@@ -326,7 +334,7 @@ class FacilityVenuesResponse(TypedDict):
     msg: EmptyStr
     msgdesc: EmptyStr
     msgtype: EmptyStr
-    option: list[_VenueDetails]
+    option: list[VenueDetails]
 
 
 class FacilityBookingDateOptionsResponse(TypedDict):
@@ -431,16 +439,9 @@ class AttendanceTakeInvalidIPResponse(TypedDict):
     msgdesc: str   # "<ip> is an unknown IP address. Please connect to TARUMT's WIFI and submit again."
 
 
-class _ClassAttendance(TypedDict):
-    classDetails: str  # "hh:mm pp - hh:mm pp, <venue id>"
-    courseDesc: str    # course name
-    lectureBy: str     # lecturer name
-    courseCode: str    # course code
-
-
 class AttendanceTakeSuccessResponse(TypedDict(
     "AttendanceTakeSuccessResponse",
-    {"class": _ClassAttendance}
+    {"class": ClassDetailsAttendance}
 )):
     msg: Literal["success"]
     msgdesc: EmptyStr
